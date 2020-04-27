@@ -8,7 +8,7 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface UserRepository extends JpaRepository<UserEntity, String>, JpaSpecificationExecutor<UserEntity> {
 	
-	@Query(value = "SELECT SUM(COUNT) FROM USER GROUP BY USER_ID ", nativeQuery = true)
+	@Query(value = "SELECT SUM(COUNT) FROM USER ", nativeQuery = true)
 	int getTotalLoginCount();
 	
 }	

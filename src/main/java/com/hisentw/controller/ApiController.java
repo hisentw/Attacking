@@ -3,8 +3,11 @@ package com.hisentw.controller;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -144,11 +147,73 @@ public class ApiController {
 	public String getChatList() {
 		List<ChatEntity> chatList = null;
 		try {
-			chatList = chatRepository.findAll();
+			chatList = this.getCharList();
 		} catch (Exception e) {
 			System.out.println("getChatList error : " + e.toString());
 		}
 		return gson.toJson(chatList);
+	}
+	
+	@PostMapping(value = "/sendMessage/{userId}")
+	public String sendMessage(
+			@RequestBody String postPayload,
+			@PathVariable("userId") String userId) {
+		ResponseModel responseModel = new ResponseModel();
+		DateTime now = new DateTime().withZone(DateTimeZone.forID("Asia/Taipei"));
+		List<ChatEntity> chatList = null;
+		try {
+			Map<String, String> payloads = gson.fromJson(postPayload, new TypeToken<Map<String, String>>(){}.getType());
+			String message = payloads.get("message");
+			Optional<UserEntity> optional = userRepository.findById(userId);
+			if (optional.isPresent()) {
+				ChatEntity chatEntity = new ChatEntity();
+				chatEntity.setUserId(userId);
+				chatEntity.setMessage(message);
+				chatEntity.setMessageTime(now.toDate());
+				chatRepository.save(chatEntity);
+				chatList = this.getCharList();
+			} else {
+				responseModel.setErrorMsg("查無此筆資料");
+				return gson.toJson(responseModel);
+			}
+		} catch (Exception e) {
+			System.out.println("sendMessage error : " + e.toString());
+			responseModel.setErrorMsg("系統發生錯誤");
+			return gson.toJson(responseModel);
+		}
+		return gson.toJson(chatList);
+	}
+	
+	@GetMapping(value = "/deleteMessage/{id}")
+	public String deleteMessage(
+			@PathVariable("id") String id) {
+		ResponseModel responseModel = new ResponseModel();
+		List<ChatEntity> chatList = null;
+		try {
+			Optional<ChatEntity> optional = chatRepository.findById(id);
+			if (optional.isPresent()) {
+				chatRepository.deleteById(id);
+				chatList = this.getCharList();
+			} else {
+				responseModel.setErrorMsg("查無此筆資料");
+				return gson.toJson(responseModel);
+			}
+		} catch (Exception e) {
+			System.out.println("deleteMessage error : " + e.toString());
+			responseModel.setErrorMsg("系統發生錯誤");
+			return gson.toJson(responseModel);
+		}
+		return gson.toJson(chatList);
+	}
+	
+	private List<ChatEntity> getCharList() {
+		Map<String, UserEntity> map = userRepository.findAll().stream()
+			      .collect(Collectors.toMap(UserEntity::getUserId, v -> v));
+		List<ChatEntity> chatList = chatRepository.findAll();
+		chatList.forEach(v -> {
+			v.setUserId(v.getUserId() + "%" + map.get(v.getUserId()).getUserName());
+		});
+		return chatRepository.findAll();
 	}
 	
 }

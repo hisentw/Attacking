@@ -134,8 +134,7 @@
 			app.controller('mainController', function ($scope, $http, Upload) {
 				$scope.currentPath = "home"
 				$scope.viewer = 0;
-				$scope.chatList = [{userId: '01', userName: 'a123', message: 'who i am', messageTime: new Date()}, 
-									{userId: '02', userName: 'a456', message: 'who i am 2', messageTime: new Date()}];
+				$scope.chatList = [];
 				$scope.files = null;
 				
 				$http.get("/api/getTotalLoginCount")
@@ -154,22 +153,57 @@
 				    		return alert(response.data.errorMsg);
 				    	}
 				    	$scope.chatList = response.data;
+				    	angular.forEach($scope.chatList, function(item, key) {
+				    		var user = item.userId.split("%");
+				    		item.userId = user[0];
+				    		item.userName = user[1];
+				    	});
 				    }, function(response) {
 				    	alert('系統發生錯誤!');
 				    });
 				
 				$scope.sendMessage = function() {
-					if (!$scope.userId) {
+					if (!$scope.token) {
 						$scope.currentPath = "user"
 						return alert('請先登入');
 					}
 					if (!$scope.message) {
 						return alert('請輸入訊息');
 					}
+					var postData = {};
+					postData.message = $scope.message;
+					$http.post("/api/sendMessage/" + $scope.userId, postData)
+					    .then(function(response) {
+					    	if (response.data.errorMsg) {
+					    		return alert(response.data.errorMsg);
+					    	}
+					    	$scope.chatList = response.data;
+					    	angular.forEach($scope.chatList, function(item, key) {
+					    		var user = item.userId.split("%");
+					    		item.userId = user[0];
+					    		item.userName = user[1];
+					    	});
+					    }, function(response) {
+					    	alert('系統發生錯誤!');
+					    });
 				}
 				
 				$scope.deleteMessage = function(chatVO) {
-					console.log(chatVO);
+					$http.get("/api/deleteMessage/" + chatVO.id)
+					    .then(function(response) {
+					    	if (response.data.errorMsg) {
+					    		return alert(response.data.errorMsg);
+					    	}
+					    	$scope.chatList = response.data;
+					    	angular.forEach($scope.chatList, function(item, key) {
+					    		var user = item.userId.split("%");
+					    		item.userId = user[0];
+					    		item.userName = user[1];
+					    	});
+					    	return alert('刪除成功');
+					    }, function(response) {
+					    	alert('系統發生錯誤!');
+					    });
 				}
 				
 				$scope.login = function() {
