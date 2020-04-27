@@ -79,34 +79,82 @@
 				<div class="col-md-8 offset-md-2">
 					<form ng-show="!token">
 					  <div class="form-group">
-					    <label for="exampleInputEmail1">帳號</label>
-					    <input type="text" class="form-control" id="exampleInputEmail1" placeholder="請輸入帳號"
+					    <label for="account">帳號</label>
+					    <input type="text" class="form-control" id="account" placeholder="請輸入帳號"
 					    		ng-model="account">
 					  </div>
 					  <div class="form-group">
-					    <label for="exampleInputPassword1">密碼</label>
-					    <input type="password" class="form-control" id="exampleInputPassword1" placeholder="請輸入密碼"
-					    		ng-model="account">
+					    <label for="password">密碼</label>
+					    <input type="password" class="form-control" id="password" placeholder="請輸入密碼"
+					    		ng-model="password">
 					  </div>
-					  <div style="text-align:center">
-					  	<button type="submit" class="btn btn-primary">登入</button>
+					  <div class="form-group text-center">
+					  	<button type="submit" class="btn btn-primary"  ng-click="login()">登入</button>
 					  </div>
 					</form>
 					<form ng-show="token">
-						會員資訊
+					 	<div class="form-group">
+						   <img id="myImage">
+						</div>
+						<div class="form-group">
+						   <label for="userName">使用者名稱</label>
+						   <input type="text" class="form-control" id="userName" placeholder="請輸入使用者名稱"
+						    		ng-model="userName">
+						</div>
+						<div class="form-group text-center">
+						   <button type="submit" class="btn btn-primary"  ng-click="updateName()">修改使用者名稱</button>
+						</div>
+						<div class="form-group">
+						   <label for="count">目前登入次數</label>
+						   <input type="text" class="form-control" id="count" disabled="true"
+						    		ng-model="count">
+						 </div>
+						 <div class="form-group row" style="margin: 0 0">
+						 <label for="count">選擇大頭貼</label>
+					        <input type="file" class="btn form-control-file col-5"
+					               ng-model="file"
+						       	   ngf-select 
+					   		   	   ngf-max-size="500KB">
+						</div>
+				        <div ng-show="file" class="form-group text-center">
+				    		<label>圖片預覽</label>
+				    		<img ngf-thumbnail="file" ngf-size="{width: 300, height: 300}">
+				  		</div>
+				   		 <div class="form-group text-center">
+				    		<button class="btn btn-info" type="button" style="margin-top: 1rem"
+				    				ng-click="uploadImage()">上傳</button>
+					    </div>
 					</form>
 				</div>
 			</div>
 		</section>
 		<script type="text/javascript">
 			var app = angular.module("myApp", ['angular.filter', 'ngSanitize', 'ngFileUpload']);
-			app.controller('mainController', function ($scope, $http) {
+			app.controller('mainController', function ($scope, $http, Upload) {
 				$scope.currentPath = "home"
-				$scope.viewer = 100;
+				$scope.viewer = 0;
 				$scope.chatList = [{userId: '01', userName: 'a123', message: 'who i am', messageTime: new Date()}, 
 									{userId: '02', userName: 'a456', message: 'who i am 2', messageTime: new Date()}];
-				$scope.userId = null;
-				$scope.token = null;
+				
+				$http.get("/api/getTotalLoginCount")
+				    .then(function(response) {
+				    	if (response.data.errorMsg) {
+				    		return alert(response.data.errorMsg);
+				    	}
+				    	$scope.viewer = response.data;
+				    }, function(response) {
+				    	alert('系統發生錯誤!');
+				    });
+				
+				$http.get("/api/getChatList")
+				    .then(function(response) {
+				    	if (response.data.errorMsg) {
+				    		return alert(response.data.errorMsg);
+				    	}
+				    	$scope.chatList = response.data;
+				    }, function(response) {
+				    	alert('系統發生錯誤!');
+				    });
 				
 				$scope.sendMessage = function() {
 					if (!$scope.userId) {
@@ -121,6 +169,81 @@
 				$scope.deleteMessage = function(chatVO) {
 					console.log(chatVO);
 				}
+				
+				$scope.login = function() {
+					if (!$scope.account || !$scope.password) {
+						return alert('請輸入帳號與密碼');
+					}
+					var postData = {};
+					postData.account = $scope.account;
+					postData.password = $scope.password;
+					$http.post("/api/login", postData)
+					    .then(function(response) {
+					    	if (response.data.errorMsg) {
+					    		return alert(response.data.errorMsg);
+					    	}
+					    	$scope.token = 'loginsuccess';
+					    	$scope.userId = response.data.userId;
+					    	$scope.userName = response.data.userName;
+					    	$scope.count = response.data.count;
+					    }, function(response) {
+					    	alert('系統發生錯誤!');
+					    });
+					
+					$http.get("/api/getImage/" + $scope.userId, {responseType: "arraybuffer"})
+					    .then(function(response) {
+					    	var blob = new Blob([response.data], {type: 'image/png'});
+					    	var imageUrl = URL.createObjectURL(blob);
+					    	$('#myImage').src = imageUrl;
+					    }, function(response) {
+					    	alert('系統發生錯誤!');
+					    });
+				}
+				
+				$scope.updateName = function() {
+					if (!$scope.userName) {
+						return alert('請輸入使用者名稱');
+					}
+					var postData = {};
+					postData.userName = $scope.userName;
+					$http.post("/api/updateName/" + $scope.userId, postData)
+					    .then(function(response) {
+					    	if (response.data.errorMsg) {
+					    		return alert(response.data.errorMsg);
+					    	}
+					    	alert('修改成功!');
+					    }, function(response) {
+					    	alert('系統發生錯誤!');
+					    });
+					
+					$http.get("/api/getImage/" + $scope.userId, {responseType: "arraybuffer"})
+					    .then(function(response) {
+					    	var blob = new Blob([response.data], {type: 'image/png'});
+					    	var imageUrl = URL.createObjectURL(blob);
+					    	$('#myImage').src = imageUrl;
+					    }, function(response) {
+					    	alert('系統發生錯誤!');
+					    });
+				}
+				
+				$scope.uploadImage = function() {
+					if ($scope.file) {
+		 		    	Upload.upload({
+		 		            url: '/api/uploadImage/' + $scope.userId,
+		 		            data: {file: $scope.file}
+		 		        })
+		 		        .then(function (response) {
+		 		        	if (response.data.errorMsg) {
+					    		return alert(response.data.errorMsg);
+					    	}
+		 		        	$scope.file = null;
+		 		        	alert('上傳成功!');
+		 		        }, function (resp) {
+		 		        	alert('系統發生錯誤!');
+		 		        });
+				    }
+				}
+				
 			});
  		</script> 
 	</body>
