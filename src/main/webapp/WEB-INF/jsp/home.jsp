@@ -94,7 +94,7 @@
 					</form>
 					<form ng-show="token">
 					 	<div class="form-group">
-						   <img id="myImage">
+						   <img id="myImage" style="width:50%">
 						</div>
 						<div class="form-group">
 						   <label for="userName">使用者名稱</label>
@@ -112,13 +112,14 @@
 						 <div class="form-group row" style="margin: 0 0">
 						 <label for="count">選擇大頭貼</label>
 					        <input type="file" class="btn form-control-file col-5"
-					               ng-model="file"
-						       	   ngf-select 
-					   		   	   ngf-max-size="500KB">
+					               ng-model="files"
+						       	   ngf-select
+					   		   	   ngf-pattern="'image/*'"
+    							   ngf-accept="'image/*'">
 						</div>
-				        <div ng-show="file" class="form-group text-center">
+				        <div ng-show="files" class="form-group text-center">
 				    		<label>圖片預覽</label>
-				    		<img ngf-thumbnail="file" ngf-size="{width: 300, height: 300}">
+				    		<img ngf-thumbnail="files" ngf-size="{width: 300, height: 300}">
 				  		</div>
 				   		 <div class="form-group text-center">
 				    		<button class="btn btn-info" type="button" style="margin-top: 1rem"
@@ -135,6 +136,7 @@
 				$scope.viewer = 0;
 				$scope.chatList = [{userId: '01', userName: 'a123', message: 'who i am', messageTime: new Date()}, 
 									{userId: '02', userName: 'a456', message: 'who i am 2', messageTime: new Date()}];
+				$scope.files = null;
 				
 				$http.get("/api/getTotalLoginCount")
 				    .then(function(response) {
@@ -186,15 +188,14 @@
 					    	$scope.userId = response.data.userId;
 					    	$scope.userName = response.data.userName;
 					    	$scope.count = response.data.count;
-					    }, function(response) {
-					    	alert('系統發生錯誤!');
-					    });
-					
-					$http.get("/api/getImage/" + $scope.userId, {responseType: "arraybuffer"})
-					    .then(function(response) {
-					    	var blob = new Blob([response.data], {type: 'image/png'});
-					    	var imageUrl = URL.createObjectURL(blob);
-					    	$('#myImage').src = imageUrl;
+					    	$http.get("/api/getImage/" + $scope.userId, {responseType: "arraybuffer"})
+							    .then(function(response) {
+							    	var blob = new Blob([response.data], {type: 'image/png'});
+							    	var imageUrl = URL.createObjectURL(blob);
+							    	$('#myImage')[0].src = imageUrl;
+							    }, function(response) {
+							    	alert('系統發生錯誤!');
+							    });
 					    }, function(response) {
 					    	alert('系統發生錯誤!');
 					    });
@@ -227,10 +228,10 @@
 				}
 				
 				$scope.uploadImage = function() {
-					if ($scope.file) {
+					if ($scope.files) {
 		 		    	Upload.upload({
 		 		            url: '/api/uploadImage/' + $scope.userId,
-		 		            data: {file: $scope.file}
+		 		            data: {file: $scope.files}
 		 		        })
 		 		        .then(function (response) {
 		 		        	if (response.data.errorMsg) {
@@ -238,6 +239,14 @@
 					    	}
 		 		        	$scope.file = null;
 		 		        	alert('上傳成功!');
+		 		        	$http.get("/api/getImage/" + $scope.userId, {responseType: "arraybuffer"})
+							    .then(function(response) {
+							    	var blob = new Blob([response.data], {type: 'image/png'});
+							    	var imageUrl = URL.createObjectURL(blob);
+							    	$('#myImage')[0].src = imageUrl;
+							    }, function(response) {
+							    	alert('系統發生錯誤!');
+							    });
 		 		        }, function (resp) {
 		 		        	alert('系統發生錯誤!');
 		 		        });
